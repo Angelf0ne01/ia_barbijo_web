@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      * {
+        background-color: #ebebeb;
+        font-family: sans-serif;
+      }
+
+      .text {
+        text-align: center;
+      }
+      #container {
+        width: 100%;
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 100%;
+        grid-template-rows: 10% 70% 20%;
+      }
+
+      #wrapper {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 50% 50%;
+        grid-template-rows: 100%;
+      }
+
+      #grid_status {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 100%;
+        grid-template-rows: 90% 10%;
+      }
+
+      #button_start {
+        width: 50%;
+        padding: 34px;
+        border: 0px;
+        color: white;
+        background-color: #33b5e5;
+        font-size: 50px;
+        border-radius: 10px;
+      }
+      #button_start:hover {
+        background-color: #0099cc;
+      }
+
+      .center {
+        display: flex;
+        width: 100%;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .img {
+        width: 500px;
+        height: 500px;
+        visibility: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div class="center">
+        <h1 id="title">DETECCION DE BARBIJO CON IA</h1>
+      </div>
+      <div id="wrapper">
+        <div class="center">
+          <div id="webcam-container"></div>
+        </div>
+        <div id="grid_status">
+          <div class="center">
+            <img id="img_status" class="img" src="" />
+          </div>
+          <h1 id="text_status" class="text"></h1>
+        </div>
+      </div>
+      <div class="center">
+        <button id="button_start" type="button" onclick="init()">Start</button>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+      const img = document.getElementById("img_status");
+      const text = document.getElementById("text_status");
+      // More API functions here:
+      // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
+
+      // the link to your model provided by Teachable Machine export panel
+      const URL = "http://localhost:8080/my_model/";
+
+      let model, webcam, labelContainer, maxPredictions;
+
+      // Load the image model and setup the webcam
+      async function init() {
+        img.style.visibility = "visible";
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // load the model and metadata
+        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
+        // or files from your local hard drive
+        // Note: the pose library adds "tmImage" object to your window (window.tmImage)
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Convenience function to setup a webcam
+        const flip = true; // whether to flip the webcam
+        webcam = new tmImage.Webcam(700, 700, flip); // width, height, flip
+        await webcam.setup(); // request access to the webcam
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        // append elements to the DOM
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
+        labelContainer = document.getElementById("label-container");
+        for (let i = 0; i < maxPredictions; i++) {
+          // and class labels
+          labelContainer.appendChild(document.createElement("div"));
+        }
+      }
+
+      async function loop() {
+        webcam.update(); // update the webcam frame
+        await predict();
+        window.requestAnimationFrame(loop);
+      }
+
+      // run the webcam image through the image model
+      async function predict() {
+        // predict can take in an image, video or canvas html element
+        const prediction = await model.predict(webcam.canvas);
+        let sin_barbijo = prediction[0].probability;
+        let con_barbijo = prediction[1].probability;
+        console.log("barbijo?:", con_barbijo > sin_barbijo);
+        if (con_barbijo > sin_barbijo) success();
+        else error();
+      }
+
+      function success() {
+        text.innerHTML = "Acceso Permitido";
+        text.style.color = "#00C851";
+        img.src =
+          "https://freepngimg.com/thumb/success/6-2-success-png-image.png";
+      }
+
+      function error() {
+        text.innerHTML = "Acceso Denegado";
+        text.style.color = "#CC0000";
+        img.src = "https://thingxyz.net/img/errorInput.png";
+      }
+    </script>
+  </body>
+</html>
